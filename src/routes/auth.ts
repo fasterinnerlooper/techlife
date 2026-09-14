@@ -38,12 +38,12 @@ authRouter.post('/register', async (req, res, next) => {
     await prisma.timeline.create({ data: { userId: user.id, isDefault: true } });
 
     const token = jwt.sign({ sub: user.id }, env.JWT_SECRET, { expiresIn: '7d' });
-    res.status(201).json({ token, user: { id: user.id, email: user.email, username: user.username } });
+    return res.status(201).json({ token, user: { id: user.id, email: user.email, username: user.username } });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return res.status(409).json({ error: 'Email or username already in use' });
     }
-    next(error);
+    return next(error);
   }
 });
 

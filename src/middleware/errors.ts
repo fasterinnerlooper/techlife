@@ -16,5 +16,5 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
       ? (err as { status: number }).status
       : undefined;
   const status = maybeStatus ?? (message.toLowerCase().includes('not found') ? 404 : 500);
-  res.status(status).json({ error: message });
+  return res.status(status).json({ error: message });
 }
