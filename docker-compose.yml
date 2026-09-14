@@ -6,7 +6,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: ******postgres:5432/techlife?schema=public
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/techlife?schema=public"
     depends_on:
       postgres:
         condition: service_healthy
