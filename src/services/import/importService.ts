@@ -20,10 +20,10 @@ export async function createImportAndCandidates(input: {
   method: ImportMethod;
   sourceLabel?: string;
   sourceUrl?: string;
-  content: string;
+  content?: string;
 }) {
   const normalizedContent =
-    input.method === ImportMethod.PASTE_URL && input.sourceUrl ? await fetchImportableUrl(input.sourceUrl) : input.content;
+    input.method === ImportMethod.PASTE_URL && input.sourceUrl ? await fetchImportableUrl(input.sourceUrl) : input.content ?? '';
 
   const importEntity = await prisma.import.create({
     data: {
@@ -57,7 +57,11 @@ export async function createImportAndCandidates(input: {
   } else {
     extraction = await aiProvider.extractOwnership({
       mode:
-        input.method === ImportMethod.UPLOAD_IMAGE || input.method === ImportMethod.PHOTO_COLLECTION ? 'image' : 'text',
+        input.method === ImportMethod.UPLOAD_IMAGE || input.method === ImportMethod.PHOTO_COLLECTION
+          ? 'image'
+          : input.method === ImportMethod.PASTE_URL
+            ? 'url'
+            : 'text',
       content: normalizedContent,
       sourceLabel: input.sourceLabel ?? input.sourceUrl,
     });
@@ -186,6 +190,39 @@ export async function confirmImportCandidates(
         throw new Error('Duplicate target record not found');
       }
 
+      const evidenceSnippets = Array.isArray(candidate.evidenceJson) ? (candidate.evidenceJson as string[]) : [];
+      const uniqueSnippets = [...new Set(evidenceSnippets.map((snippet) => snippet.trim()).filter(Boolean))];
+      let mergedEvidenceCount = 0;
+      if (uniqueSnippets.length > 0) {
+        const existingEvidence = await prisma.evidence.findMany({
+          where: { ownershipRecordId: duplicateTarget.id },
+          select: { snippet: true },
+        });
+        const existingSet = new Set(existingEvidence.map((entry) => entry.snippet));
+        const newEvidenceRows: Array<{
+          ownershipRecordId: string;
+          importSourceId?: string;
+          snippet: string;
+          confidenceScore: number;
+        }> = [];
+
+        for (const snippet of uniqueSnippets) {
+          if (existingSet.has(snippet)) continue;
+          newEvidenceRows.push({
+            ownershipRecordId: duplicateTarget.id,
+            importSourceId: importEntity.sources[0]?.id,
+            snippet,
+            confidenceScore: candidate.confidenceScore,
+          });
+        }
+        if (newEvidenceRows.length > 0) {
+          await prisma.evidence.createMany({
+            data: newEvidenceRows,
+          });
+          mergedEvidenceCount = newEvidenceRows.length;
+        }
+      }
+
       await prisma.extractedCandidate.update({
         where: { id: candidate.id },
         data: {
@@ -193,13 +230,37 @@ export async function confirmImportCandidates(
           ambiguityJson: {
             duplicateOfOwnershipId: duplicateTarget.id,
             resolvedAt: new Date().toISOString(),
+            mergedEvidenceCount,
           },
         },
       });
       continue;
     }
 
-    const canonicalId = candidate.canonicalProductId;
+    const correctedName = confirmation.overrideModel ?? confirmation.overrideName ?? candidate.extractedName;
+    const hasNameOverride = correctedName !== candidate.extractedName;
+    let canonicalId = candidate.canonicalProductId ?? null;
+    let resolvedName = candidate.extractedName;
+
+    if (hasNameOverride) {
+      const canonical = await resolveCanonicalProduct({
+        extractedName: correctedName,
+        manufacturer: candidate.manufacturer ?? undefined,
+        categoryKey: candidate.categoryKey ?? undefined,
+      });
+      if (canonical?.id) {
+        canonicalId = canonical.id;
+        resolvedName = correctedName;
+      }
+    }
+    if (!canonicalId) {
+      const fallbackCanonical = await resolveCanonicalProduct({
+        extractedName: candidate.extractedName,
+        manufacturer: candidate.manufacturer ?? undefined,
+        categoryKey: candidate.categoryKey ?? undefined,
+      });
+      canonicalId = fallbackCanonical?.id ?? null;
+    }
     if (!canonicalId) continue;
 
     const start = parseDateHint(candidate.startDateText);
@@ -247,7 +308,11 @@ export async function confirmImportCandidates(
 
     await prisma.extractedCandidate.update({
       where: { id: candidate.id },
-      data: { status: CandidateStatus.CONFIRMED },
+      data: {
+        status: CandidateStatus.CONFIRMED,
+        canonicalProductId: canonicalId,
+        extractedName: resolvedName,
+      },
     });
 
     confirmedOwnershipIds.push(ownership.id);
