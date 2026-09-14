@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import path from 'node:path';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -13,6 +14,7 @@ import { healthRouter } from './routes/health.js';
 import { errorHandler } from './middleware/errors.js';
 
 export const app = express();
+const publicDir = path.join(process.cwd(), 'public');
 
 app.use(helmet());
 app.use(
@@ -30,6 +32,7 @@ app.use(
 );
 
 app.use('/health', healthRouter);
+app.use(express.static(publicDir));
 app.use('/api/auth', authRouter);
 app.use('/api/imports', importsRouter);
 app.use('/api/ownership-records', ownershipRouter);
@@ -37,11 +40,11 @@ app.use('/api/timeline', timelineRouter);
 app.use('/api', publicRouter);
 
 app.get('/', (_req, res) => {
-  res.type('html').send(`<!doctype html><html><head><title>Techlife</title></head><body>
-  <h1>Remember everything you've ever owned.</h1>
-  <p>Build a timeline of the technology that shaped your life.</p>
-  <p>Use the API to import your history and build your timeline.</p>
-  </body></html>`);
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
+
+app.get('/u/:slug', (_req, res) => {
+  res.sendFile(path.join(publicDir, 'share.html'));
 });
 
 app.use(errorHandler);

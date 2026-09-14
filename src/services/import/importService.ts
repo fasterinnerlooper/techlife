@@ -8,11 +8,55 @@ import { resolveCanonicalProduct } from './resolution.js';
 
 const aiProvider = createAiProvider();
 
-function categorizeCandidate(confidence: number, ambiguousCount: number): CandidateStatus {
+type DuplicateMatch = {
+  ownershipId: string;
+  product: string;
+  manufacturer: string;
+  startDateText: string | null;
+  endDateText: string | null;
+  sourceSummary: string | null;
+  confidenceScore: number;
+};
+
+function categorizeCandidate(confidence: number, ambiguousCount: number, duplicateCount: number): CandidateStatus {
+  if (duplicateCount > 0) return CandidateStatus.POSSIBLE_DUPLICATE;
   if (ambiguousCount > 0) return CandidateStatus.NEEDS_REVIEW;
   if (confidence >= 0.8) return CandidateStatus.CONFIRMED;
   if (confidence >= 0.5) return CandidateStatus.NEEDS_REVIEW;
   return CandidateStatus.POSSIBLE_DUPLICATE;
+}
+
+async function findDuplicateMatches(params: {
+  userId: string;
+  canonicalProductId: string | null;
+}): Promise<DuplicateMatch[]> {
+  if (!params.canonicalProductId) return [];
+
+  const records = await prisma.ownershipRecord.findMany({
+    where: {
+      userId: params.userId,
+      canonicalProductId: params.canonicalProductId,
+    },
+    include: {
+      canonicalProduct: {
+        include: {
+          manufacturer: true,
+        },
+      },
+    },
+    orderBy: [{ startDate: 'asc' }, { createdAt: 'asc' }],
+    take: 5,
+  });
+
+  return records.map((record) => ({
+    ownershipId: record.id,
+    product: record.canonicalProduct.name,
+    manufacturer: record.canonicalProduct.manufacturer.name,
+    startDateText: record.startDateText,
+    endDateText: record.endDateText,
+    sourceSummary: record.sourceSummary,
+    confidenceScore: record.confidenceScore,
+  }));
 }
 
 export async function createImportAndCandidates(input: {
@@ -92,8 +136,16 @@ export async function createImportAndCandidates(input: {
       manufacturer: item.manufacturer,
       categoryKey: item.categoryKey,
     });
+    const duplicateMatches = await findDuplicateMatches({
+      userId: input.userId,
+      canonicalProductId: canonical.id,
+    });
     const start = parseDateHint(item.startDateText);
     const end = parseDateHint(item.endDateText);
+    const ambiguityPayload = {
+      ambiguousModels: item.ambiguousModels,
+      duplicateMatches,
+    };
 
     const candidate = await prisma.extractedCandidate.create({
       data: {
@@ -108,8 +160,8 @@ export async function createImportAndCandidates(input: {
         endDatePrecision: end.precision,
         ownershipStatus: item.ownershipStatus,
         confidenceScore: item.confidenceScore,
-        status: categorizeCandidate(item.confidenceScore, item.ambiguousModels.length),
-        ambiguityJson: item.ambiguousModels as unknown as Prisma.InputJsonValue,
+        status: categorizeCandidate(item.confidenceScore, item.ambiguousModels.length, duplicateMatches.length),
+        ambiguityJson: ambiguityPayload as unknown as Prisma.InputJsonValue,
         evidenceJson: item.evidenceSnippets as unknown as Prisma.InputJsonValue,
         reasoning: item.reasoning,
       },
