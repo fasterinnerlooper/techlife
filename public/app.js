@@ -4,6 +4,13 @@ const state = {
 };
 
 const $ = (selector) => document.querySelector(selector);
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 
 function setStatus(message) {
   const banner = $('#status-banner');
@@ -17,7 +24,7 @@ function setStatus(message) {
 function headers(json = true) {
   const base = {};
   if (json) base['Content-Type'] = 'application/json';
-  if (state.token) base.Authorization = `******;
+  if (state.token) base.Authorization = ['Bearer', state.token].join(' ');
   return base;
 }
 
@@ -57,7 +64,8 @@ function renderStats(stats) {
   if (!container) return;
   container.innerHTML = statEntries(stats)
     .map(
-      ([label, value]) => `<div class="stat-card"><span class="muted">${label}</span><strong>${value ?? '—'}</strong></div>`,
+      ([label, value]) =>
+        `<div class="stat-card"><span class="muted">${escapeHtml(label)}</span><strong>${escapeHtml(value ?? '—')}</strong></div>`,
     )
     .join('');
 }
@@ -74,22 +82,22 @@ function renderTimeline(items) {
     .map(
       (item) => `
       <article class="timeline-item">
-        <strong>${item.product}</strong>
-        <div class="timeline-meta">${item.manufacturer} · ${item.category}</div>
-        <div class="timeline-meta">${item.startDateText || 'Unknown start'} → ${item.endDateText || 'Present / unknown end'}</div>
-        <div class="timeline-meta">${item.memories || item.notes || ''}</div>
+        <strong>${escapeHtml(item.product)}</strong>
+        <div class="timeline-meta">${escapeHtml(item.manufacturer)} · ${escapeHtml(item.category)}</div>
+        <div class="timeline-meta">${escapeHtml(item.startDateText || 'Unknown start')} → ${escapeHtml(item.endDateText || 'Present / unknown end')}</div>
+        <div class="timeline-meta">${escapeHtml(item.memories || item.notes || '')}</div>
       </article>`,
     )
     .join('');
 }
 
 function candidateActionButtons(candidate) {
-  const base = `<button type="button" data-confirm="${candidate.id}">Confirm</button>`;
+  const base = `<button type="button" data-confirm="${escapeHtml(candidate.id)}">Confirm</button>`;
   const override = candidate.status === 'NEEDS_REVIEW'
-    ? `<button type="button" class="secondary" data-override="${candidate.id}">Choose model</button>`
+    ? `<button type="button" class="secondary" data-override="${escapeHtml(candidate.id)}">Choose model</button>`
     : '';
   const duplicate = Array.isArray(candidate.ambiguityJson?.duplicateMatches) && candidate.ambiguityJson.duplicateMatches.length
-    ? `<button type="button" class="secondary" data-duplicate="${candidate.id}">Merge evidence</button>`
+    ? `<button type="button" class="secondary" data-duplicate="${escapeHtml(candidate.id)}">Merge evidence</button>`
     : '';
   return `${base}${override}${duplicate}`;
 }
@@ -118,19 +126,19 @@ function renderReview(review) {
                   .map(
                     (candidate) => `
                     <article class="candidate-card">
-                      <strong>${candidate.extractedName}</strong>
-                      <div class="candidate-meta">${candidate.startDateText || 'Unknown start'} → ${candidate.endDateText || 'Unknown end'}</div>
-                      <div class="candidate-meta">${(candidate.evidenceJson || []).slice(0, 2).join(' · ') || 'No evidence snippets stored'}</div>
+                      <strong>${escapeHtml(candidate.extractedName)}</strong>
+                      <div class="candidate-meta">${escapeHtml(candidate.startDateText || 'Unknown start')} → ${escapeHtml(candidate.endDateText || 'Unknown end')}</div>
+                      <div class="candidate-meta">${escapeHtml(((candidate.evidenceJson || []).slice(0, 2).join(' · ')) || 'No evidence snippets stored')}</div>
                       ${
                         candidate.ambiguityJson?.duplicateMatches?.length
                           ? `<div class="candidate-meta">Possible duplicate of ${candidate.ambiguityJson.duplicateMatches
-                              .map((match) => `${match.product} (${match.startDateText || 'unknown'})`)
+                              .map((match) => `${escapeHtml(match.product)} (${escapeHtml(match.startDateText || 'unknown')})`)
                               .join(', ')}</div>`
                           : ''
                       }
                       ${
                         candidate.ambiguityJson?.ambiguousModels?.length
-                          ? `<div class="candidate-meta">Ambiguous models: ${candidate.ambiguityJson.ambiguousModels.join(', ')}</div>`
+                          ? `<div class="candidate-meta">Ambiguous models: ${escapeHtml(candidate.ambiguityJson.ambiguousModels.join(', '))}</div>`
                           : ''
                       }
                       <div class="candidate-actions">${candidateActionButtons(candidate)}</div>
@@ -247,7 +255,7 @@ imageForm?.addEventListener('submit', async (event) => {
     const formData = new FormData(imageForm);
     const result = await request('/api/imports/upload', {
       method: 'POST',
-      headers: state.token ? { Authorization: `****** } : {},
+      headers: state.token ? { Authorization: ['Bearer', state.token].join(' ') } : {},
       body: formData,
     });
     const review = await request(`/api/imports/${result.importId}/review`, { headers: headers(false) });
@@ -276,7 +284,8 @@ wireJsonForm('#owned-at-form', async (form) => {
   $('#owned-at-results').innerHTML = result.items.length
     ? result.items
         .map(
-          (item) => `<div class="timeline-item"><strong>${item.product}</strong><div class="timeline-meta">${item.startDateText || 'Unknown'} → ${item.endDateText || 'Unknown'}</div></div>`,
+          (item) =>
+            `<div class="timeline-item"><strong>${escapeHtml(item.product)}</strong><div class="timeline-meta">${escapeHtml(item.startDateText || 'Unknown')} → ${escapeHtml(item.endDateText || 'Unknown')}</div></div>`,
         )
         .join('')
     : '<p class="muted">No devices overlap that year.</p>';

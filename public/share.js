@@ -1,7 +1,14 @@
 const slug = window.location.pathname.split('/').filter(Boolean).at(-1);
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 
 function renderStat(label, value) {
-  return `<div class="stat-card"><span class="muted">${label}</span><strong>${value}</strong></div>`;
+  return `<div class="stat-card"><span class="muted">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
 }
 
 async function loadSharePage() {
@@ -23,10 +30,10 @@ async function loadSharePage() {
         .map(
           (item) => `
             <article class="timeline-item">
-              <strong>${item.product}</strong>
-              <div class="timeline-meta">${item.manufacturer} · ${item.category}</div>
-              <div class="timeline-meta">${item.startDateText || 'Unknown'} → ${item.endDateText || 'Unknown'}</div>
-              <div class="timeline-meta">${item.memories || ''}</div>
+              <strong>${escapeHtml(item.product)}</strong>
+              <div class="timeline-meta">${escapeHtml(item.manufacturer)} · ${escapeHtml(item.category)}</div>
+              <div class="timeline-meta">${escapeHtml(item.startDateText || 'Unknown')} → ${escapeHtml(item.endDateText || 'Unknown')}</div>
+              <div class="timeline-meta">${escapeHtml(item.memories || '')}</div>
             </article>`,
         )
         .join('')
