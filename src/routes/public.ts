@@ -37,6 +37,17 @@ publicRouter.patch('/profile/public', requireAuth, async (req, res, next) => {
   }
 });
 
+publicRouter.get('/profile/public', requireAuth, async (req, res, next) => {
+  try {
+    const profile = await prisma.publicProfile.findUnique({
+      where: { userId: req.userId! },
+    });
+    return res.json(profile);
+  } catch (error) {
+    return next(error);
+  }
+});
+
 publicRouter.get('/u/:slug', async (req, res, next) => {
   try {
     const data = await getPublicTimeline(req.params.slug);

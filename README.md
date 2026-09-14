@@ -8,6 +8,7 @@ Techlife is an MVP focused on reconstructing a personal technology history from 
 
 - Authentication (register/login with JWT)
 - Manual ownership entry
+- Browser UI for onboarding, imports, review, timeline browsing, and public sharing
 - Chronological timeline API
 - “What did I own in year X?” query
 - Basic timeline statistics tolerant of uncertain dates
@@ -92,19 +93,19 @@ Required minimum:
 AI configuration:
 
 - `AI_PROVIDER=mock|openai`
-- `AI_MODEL_TEXT`
-- `AI_MODEL_VISION`
+- `AI_MODEL_TEXT` (or legacy `OPENAI_MODEL_TEXT`)
+- `AI_MODEL_VISION` (or legacy `OPENAI_MODEL_VISION`)
 - `OPENAI_API_KEY` (required only when `AI_PROVIDER=openai`)
 
 Operational settings:
 
 - `PORT`
-- `PUBLIC_BASE_URL`
+- `PUBLIC_BASE_URL` (or legacy `PUBLIC_URL`)
 - `CORS_ORIGIN`
-- `UPLOAD_MAX_MB`
+- `UPLOAD_MAX_MB` (or legacy `MAX_UPLOAD_SIZE_MB`)
 - `URL_IMPORT_TIMEOUT_MS`
 - `RATE_LIMIT_WINDOW_MS`
-- `RATE_LIMIT_MAX`
+- `RATE_LIMIT_MAX` (or legacy `RATE_LIMIT_MAX_REQUESTS`)
 
 ## Local development
 
@@ -144,6 +145,12 @@ Operational settings:
    npm run dev
    ```
 
+7. Open the app:
+
+   ```text
+   http://localhost:3000
+   ```
+
 ## Build, lint, type-check, tests
 
 ```bash
@@ -159,7 +166,7 @@ npm run build
 docker compose up --build
 ```
 
-The API will be available at `http://localhost:3000`.
+The browser app and API will be available at `http://localhost:3000`.
 
 ## Production deployment notes
 
@@ -188,6 +195,7 @@ Seed products are development-only fixtures and must not be treated as complete 
 - `GET /api/timeline`
 - `GET /api/timeline/stats`
 - `GET /api/timeline/owned-at?year=YYYY`
+- `GET /api/profile/public`
 - `PATCH /api/profile/public`
 - `GET /api/u/:slug`
 

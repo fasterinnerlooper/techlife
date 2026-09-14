@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Techlife</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="app-shell">
+    <main class="page">
+      <section class="hero card">
+        <p class="eyebrow">Techlife</p>
+        <h1>Remember everything you've ever owned.</h1>
+        <p class="lede">Build a timeline of the technology that shaped your life.</p>
+        <div class="cta-row">
+          <a href="#auth" class="button primary">Import your history</a>
+          <a href="#manual-entry" class="button secondary">Start manually</a>
+        </div>
+      </section>
+
+      <section id="auth" class="grid two-up">
+        <form id="register-form" class="card stack">
+          <h2>Create account</h2>
+          <label><span>Email</span><input type="email" name="email" required /></label>
+          <label><span>Username</span><input type="text" name="username" required /></label>
+          <label><span>Password</span><input type="password" name="password" minlength="8" required /></label>
+          <button class="button primary" type="submit">Create account</button>
+        </form>
+
+        <form id="login-form" class="card stack">
+          <h2>Sign in</h2>
+          <label><span>Email</span><input type="email" name="email" required /></label>
+          <label><span>Password</span><input type="password" name="password" required /></label>
+          <button class="button secondary" type="submit">Sign in</button>
+        </form>
+      </section>
+
+      <section class="grid two-up">
+        <div class="card stack">
+          <div class="section-heading">
+            <h2>Import your technology history</h2>
+            <p>Paste text, upload a screenshot, or describe your history in your own words.</p>
+          </div>
+          <form id="text-import-form" class="stack">
+            <input type="hidden" name="method" value="PASTE_TEXT" />
+            <label><span>Source label</span><input type="text" name="sourceLabel" placeholder="Reddit post, notes, forum signature" /></label>
+            <label><span>Pasted history</span><textarea name="content" rows="8" placeholder="I had a Nokia 3310 around 2001..."></textarea></label>
+            <button class="button primary" type="submit">Import pasted text</button>
+          </form>
+          <form id="freeform-import-form" class="stack">
+            <input type="hidden" name="method" value="FREEFORM_DESCRIPTION" />
+            <label><span>Free-form description</span><textarea name="content" rows="6" placeholder="My first computer was a Pentium II..."></textarea></label>
+            <button class="button secondary" type="submit">Import description</button>
+          </form>
+          <form id="image-import-form" class="stack">
+            <label><span>Screenshot or photo</span><input type="file" name="image" accept="image/png,image/jpeg,image/webp" required /></label>
+            <label><span>Source label</span><input type="text" name="sourceLabel" placeholder="XDA signature screenshot" /></label>
+            <button class="button secondary" type="submit">Import image</button>
+          </form>
+        </div>
+
+        <div class="card stack">
+          <div class="section-heading">
+            <h2>Import review</h2>
+            <p>Low-confidence and duplicate candidates stay in review until you confirm them.</p>
+          </div>
+          <div id="import-summary" class="muted">No import processed yet.</div>
+          <div id="review-groups" class="stack"></div>
+        </div>
+      </section>
+
+      <section id="manual-entry" class="grid two-up">
+        <form id="manual-entry-form" class="card stack">
+          <h2>Manual entry</h2>
+          <label><span>Device / product</span><input type="text" name="product" required /></label>
+          <label><span>Manufacturer</span><input type="text" name="manufacturer" /></label>
+          <label><span>Category key</span><input type="text" name="categoryKey" placeholder="mobile-phones" /></label>
+          <label><span>Start date</span><input type="text" name="startDateText" placeholder="around 2004" /></label>
+          <label><span>End date</span><input type="text" name="endDateText" placeholder="2006" /></label>
+          <label><span>Memories</span><textarea name="memories" rows="4"></textarea></label>
+          <label><span>Notes</span><textarea name="notes" rows="3"></textarea></label>
+          <label class="inline-checkbox"><input type="checkbox" name="isPrivate" checked /> Keep private by default</label>
+          <button class="button primary" type="submit">Add device</button>
+        </form>
+
+        <div class="card stack">
+          <div class="section-heading">
+            <h2>Public profile</h2>
+            <p>Share a cleaned-up public version of your timeline whenever you're ready.</p>
+          </div>
+          <form id="public-profile-form" class="stack">
+            <label><span>Public slug</span><input type="text" name="slug" placeholder="username" required /></label>
+            <label><span>Headline</span><input type="text" name="headline" placeholder="My Technology Life" /></label>
+            <label class="inline-checkbox"><input type="checkbox" name="isPublic" /> Enable public profile</label>
+            <button class="button secondary" type="submit">Save public profile</button>
+          </form>
+          <div id="public-profile-status" class="muted"></div>
+        </div>
+      </section>
+
+      <section class="grid two-up">
+        <div class="card stack">
+          <div class="section-heading">
+            <h2>Your timeline</h2>
+            <p>A chronological history of the technology that shaped your life.</p>
+          </div>
+          <div id="timeline-list" class="timeline-list">
+            <p class="muted">Sign in to load your timeline.</p>
+          </div>
+        </div>
+
+        <div class="card stack">
+          <div class="section-heading">
+            <h2>Statistics</h2>
+            <p>Approximate, uncertainty-aware insights from your timeline.</p>
+          </div>
+          <div id="stats-grid" class="stats-grid"></div>
+          <form id="owned-at-form" class="stack compact">
+            <label><span>What did I own in year…</span><input type="number" name="year" min="1900" max="2200" placeholder="2012" required /></label>
+            <button class="button secondary" type="submit">Show setup</button>
+          </form>
+          <div id="owned-at-results" class="stack"></div>
+        </div>
+      </section>
+
+      <div id="status-banner" class="status-banner" aria-live="polite"></div>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+  </html>
