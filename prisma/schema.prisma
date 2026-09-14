@@ -1,0 +1,269 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ImportMethod {
+  PASTE_TEXT
+  UPLOAD_IMAGE
+  PASTE_URL
+  FREEFORM_DESCRIPTION
+  PHOTO_COLLECTION
+  MANUAL
+}
+
+enum CandidateStatus {
+  CONFIRMED
+  NEEDS_REVIEW
+  POSSIBLE_DUPLICATE
+  REJECTED
+}
+
+enum OwnershipStatus {
+  STILL_OWNED
+  SOLD
+  GIVEN_AWAY
+  LOST
+  STOLEN
+  BROKEN
+  RECYCLED
+  UNKNOWN
+}
+
+enum DatePrecision {
+  EXACT
+  YEAR
+  SEASON
+  RANGE
+  RELATIVE
+  BEFORE
+  AFTER
+  UNKNOWN
+}
+
+enum EventType {
+  PURCHASED
+  RECEIVED
+  STARTED_USING
+  STOPPED_USING
+  SOLD
+  LOST
+  GIVEN_AWAY
+  REPAIRED
+  RETURNED
+  IMPORTED
+}
+
+model User {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  username        String            @unique
+  passwordHash    String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  ownership       OwnershipRecord[]
+  imports         Import[]
+  publicProfile   PublicProfile?
+  timelines       Timeline[]
+}
+
+model Manufacturer {
+  id         String             @id @default(uuid())
+  name       String             @unique
+  products   CanonicalProduct[]
+  createdAt  DateTime           @default(now())
+}
+
+model Category {
+  id         String             @id @default(uuid())
+  key        String             @unique
+  label      String
+  products   CanonicalProduct[]
+  createdAt  DateTime           @default(now())
+}
+
+model CanonicalProduct {
+  id                 String             @id @default(uuid())
+  name               String
+  productFamily      String?
+  exactModel         String?
+  releaseDate        DateTime?
+  specsJson          Json?
+  imageUrl           String?
+  predecessorId      String?
+  successorId        String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  manufacturerId     String
+  categoryId         String
+  manufacturer       Manufacturer       @relation(fields: [manufacturerId], references: [id])
+  category           Category           @relation(fields: [categoryId], references: [id])
+  aliases            ProductAlias[]
+  ownershipRecords   OwnershipRecord[]
+
+  @@unique([manufacturerId, name])
+}
+
+model ProductAlias {
+  id                 String             @id @default(uuid())
+  alias              String
+  canonicalProductId String
+  canonicalProduct   CanonicalProduct   @relation(fields: [canonicalProductId], references: [id], onDelete: Cascade)
+
+  @@unique([alias, canonicalProductId])
+}
+
+model OwnershipRecord {
+  id                       String          @id @default(uuid())
+  userId                   String
+  canonicalProductId       String
+  ownershipStatus          OwnershipStatus @default(UNKNOWN)
+  startDate                DateTime?
+  startDateText            String?
+  startDatePrecision       DatePrecision   @default(UNKNOWN)
+  endDate                  DateTime?
+  endDateText              String?
+  endDatePrecision         DatePrecision   @default(UNKNOWN)
+  purchasePrice            Decimal?
+  purchaseCurrency         String?
+  wherePurchased           String?
+  colour                   String?
+  storageCapacity          String?
+  condition                String?
+  notes                    String?
+  memories                 String?
+  confidenceScore          Float           @default(0.5)
+  isPrivate                Boolean         @default(true)
+  isPricePrivate           Boolean         @default(true)
+  isLocationPrivate        Boolean         @default(true)
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+  sourceSummary            String?
+  user                     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  canonicalProduct         CanonicalProduct @relation(fields: [canonicalProductId], references: [id])
+  events                   OwnershipEvent[]
+  evidence                 Evidence[]
+  photos                   Photo[]
+
+  @@index([userId, startDate])
+}
+
+model OwnershipEvent {
+  id                 String          @id @default(uuid())
+  ownershipRecordId  String
+  eventType          EventType
+  happenedAt         DateTime?
+  happenedAtText     String?
+  datePrecision      DatePrecision   @default(UNKNOWN)
+  notes              String?
+  ownershipRecord    OwnershipRecord @relation(fields: [ownershipRecordId], references: [id], onDelete: Cascade)
+}
+
+model Import {
+  id                 String             @id @default(uuid())
+  userId             String
+  method             ImportMethod
+  status             String             @default("processed")
+  foundCount         Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sources            ImportSource[]
+  candidates         ExtractedCandidate[]
+  aiJobs             AIJob[]
+}
+
+model ImportSource {
+  id                 String      @id @default(uuid())
+  importId           String
+  sourceType         String
+  sourceLabel        String?
+  sourceUrl          String?
+  sourceText         String?
+  sourceHash         String
+  createdAt          DateTime    @default(now())
+  import             Import      @relation(fields: [importId], references: [id], onDelete: Cascade)
+  evidence           Evidence[]
+}
+
+model ExtractedCandidate {
+  id                 String           @id @default(uuid())
+  importId           String
+  canonicalProductId String?
+  extractedName      String
+  manufacturer       String?
+  categoryKey        String?
+  startDateText      String?
+  endDateText        String?
+  startDatePrecision DatePrecision    @default(UNKNOWN)
+  endDatePrecision   DatePrecision    @default(UNKNOWN)
+  ownershipStatus    OwnershipStatus  @default(UNKNOWN)
+  confidenceScore    Float
+  status             CandidateStatus
+  ambiguityJson      Json?
+  evidenceJson       Json?
+  reasoning          String?
+  createdAt          DateTime         @default(now())
+  import             Import           @relation(fields: [importId], references: [id], onDelete: Cascade)
+}
+
+model Evidence {
+  id                 String           @id @default(uuid())
+  ownershipRecordId  String
+  importSourceId     String?
+  snippet            String
+  confidenceScore    Float
+  createdAt          DateTime         @default(now())
+  ownershipRecord    OwnershipRecord  @relation(fields: [ownershipRecordId], references: [id], onDelete: Cascade)
+  importSource       ImportSource?    @relation(fields: [importSourceId], references: [id])
+}
+
+model Photo {
+  id                 String           @id @default(uuid())
+  ownershipRecordId  String
+  objectKey          String
+  originalName       String?
+  mimeType           String?
+  createdAt          DateTime         @default(now())
+  ownershipRecord    OwnershipRecord  @relation(fields: [ownershipRecordId], references: [id], onDelete: Cascade)
+}
+
+model Timeline {
+  id                 String           @id @default(uuid())
+  userId             String
+  title              String           @default("My Technology Life")
+  isDefault          Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PublicProfile {
+  id                 String           @id @default(uuid())
+  userId             String           @unique
+  slug               String           @unique
+  headline           String           @default("My Technology Life")
+  isPublic           Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AIJob {
+  id                 String           @id @default(uuid())
+  importId           String
+  provider           String
+  model              String
+  status             String
+  requestHash        String
+  responseJson       Json?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  import             Import           @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@unique([importId, requestHash])
+}
