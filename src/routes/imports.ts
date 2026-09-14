@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth.js';
 import type { AuthenticatedRequest } from '../types/express.js';
 import { ConfirmCandidatesSchema, CreateImportSchema } from '../services/import/schema.js';
 import { confirmImportCandidates, createImportAndCandidates, getImportReview } from '../services/import/importService.js';
+import { upload } from '../middleware/upload.js';
 
 export const importsRouter = Router();
 importsRouter.use(requireAuth);
@@ -13,10 +14,28 @@ importsRouter.post('/', async (req: AuthenticatedRequest, res, next) => {
     const body = CreateImportSchema.parse(req.body);
     const result = await createImportAndCandidates({
       userId: req.userId,
-      method: ImportMethod[body.method],
+      method: body.method as ImportMethod,
       sourceLabel: body.sourceLabel,
       sourceUrl: body.sourceUrl,
       content: body.content,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+importsRouter.post('/upload', upload.single('image'), async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Image file is required' });
+    const sourceLabel = req.body.sourceLabel || req.file.originalname;
+    const content = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+    const result = await createImportAndCandidates({
+      userId: req.userId,
+      method: ImportMethod.UPLOAD_IMAGE,
+      sourceLabel,
+      content,
     });
     return res.status(201).json(result);
   } catch (error) {
