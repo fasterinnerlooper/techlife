@@ -17,7 +17,7 @@ export const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: true,
+    origin: env.CORS_ORIGIN.split(',').map((origin) => origin.trim()),
     credentials: true,
   }),
 );

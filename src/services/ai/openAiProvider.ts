@@ -22,7 +22,13 @@ export class OpenAiProvider implements IAiProvider {
           { role: 'system', content: [{ type: 'input_text', text: systemPrompt }] },
           {
             role: 'user',
-            content: [{ type: 'input_text', text: `Source: ${input.sourceLabel ?? 'unknown'}\n\n${input.content}` }],
+            content:
+              input.mode === 'image'
+                ? [
+                    { type: 'input_text', text: `Source: ${input.sourceLabel ?? 'unknown'}` },
+                    { type: 'input_image', image_url: input.content },
+                  ]
+                : [{ type: 'input_text', text: `Source: ${input.sourceLabel ?? 'unknown'}\n\n${input.content}` }],
           },
         ],
       },
@@ -35,8 +41,14 @@ export class OpenAiProvider implements IAiProvider {
       },
     );
 
-    const text = response.data?.output?.[0]?.content?.[0]?.text;
-    const parsed = typeof text === 'string' ? JSON.parse(text) : { items: [] };
+    const outputs = Array.isArray(response.data?.output) ? response.data.output : [];
+    const text = outputs
+      .flatMap((entry: { content?: Array<{ type?: string; text?: string }> }) => entry.content ?? [])
+      .filter((part: { type?: string; text?: string }) => part.type === 'output_text' && typeof part.text === 'string')
+      .map((part: { text?: string }) => part.text ?? '')
+      .join('\n')
+      .trim();
+    const parsed = text ? JSON.parse(text) : { items: [] };
     return ExtractionResultSchema.parse(parsed);
   }
 }

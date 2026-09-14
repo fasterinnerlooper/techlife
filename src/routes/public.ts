@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
-import type { AuthenticatedRequest } from '../types/express.js';
 import { getPublicTimeline } from '../services/timeline/timelineService.js';
 
 export const publicRouter = Router();
@@ -13,14 +12,20 @@ const ProfileSchema = z.object({
   isPublic: z.boolean(),
 });
 
-publicRouter.patch('/profile/public', requireAuth, async (req: AuthenticatedRequest, res, next) => {
+publicRouter.patch('/profile/public', requireAuth, async (req, res, next) => {
   try {
     const body = ProfileSchema.parse(req.body);
+    const updateData: { slug: string; isPublic: boolean; headline?: string } = {
+      slug: body.slug,
+      isPublic: body.isPublic,
+    };
+    if (body.headline !== undefined) updateData.headline = body.headline;
+
     const profile = await prisma.publicProfile.upsert({
-      where: { userId: req.userId },
-      update: { slug: body.slug, headline: body.headline, isPublic: body.isPublic },
+      where: { userId: req.userId! },
+      update: updateData,
       create: {
-        userId: req.userId,
+        userId: req.userId!,
         slug: body.slug,
         headline: body.headline ?? 'My Technology Life',
         isPublic: body.isPublic,

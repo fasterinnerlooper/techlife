@@ -10,6 +10,7 @@ const EnvSchema = z.object({
   AI_MODEL_VISION: z.string().default('mock-vision'),
   OPENAI_API_KEY: z.string().optional(),
   PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),
+  CORS_ORIGIN: z.string().default('http://localhost:5173'),
   UPLOAD_MAX_MB: z.coerce.number().positive().default(10),
   URL_IMPORT_TIMEOUT_MS: z.coerce.number().positive().default(7000),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().positive().default(60000),

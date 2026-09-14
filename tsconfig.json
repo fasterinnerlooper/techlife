@@ -4,13 +4,13 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src", "tests", "vitest.config.ts"],
-  "exclude": ["dist", "node_modules"]
+  "include": ["src", "vitest.config.ts"],
+  "exclude": ["dist", "node_modules", "tests"]
 }

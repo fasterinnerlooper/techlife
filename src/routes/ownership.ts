@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
-import type { AuthenticatedRequest } from '../types/express.js';
 import { prisma } from '../db/prisma.js';
 import { parseDateHint } from '../utils/dates.js';
 import { resolveCanonicalProduct } from '../services/import/resolution.js';
@@ -20,7 +19,7 @@ const ManualOwnershipSchema = z.object({
 export const ownershipRouter = Router();
 ownershipRouter.use(requireAuth);
 
-ownershipRouter.post('/', async (req: AuthenticatedRequest, res, next) => {
+ownershipRouter.post('/', async (req, res, next) => {
   try {
     const body = ManualOwnershipSchema.parse(req.body);
     const canonical = await resolveCanonicalProduct({
@@ -34,7 +33,7 @@ ownershipRouter.post('/', async (req: AuthenticatedRequest, res, next) => {
 
     const record = await prisma.ownershipRecord.create({
       data: {
-        userId: req.userId,
+        userId: req.userId!,
         canonicalProductId: canonical.id,
         startDate: start.date,
         startDateText: start.text,

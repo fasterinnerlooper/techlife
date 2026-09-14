@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
@@ -7,7 +8,7 @@ import { env } from '../config/env.js';
 
 const RegisterSchema = z.object({
   email: z.string().email(),
-  username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_-]+$/),
+  username: z.string().min(3).max(30).regex(/^[a-z0-9-]+$/),
   password: z.string().min(8),
 });
 
@@ -29,7 +30,7 @@ authRouter.post('/register', async (req, res, next) => {
         username: body.username,
         passwordHash,
         publicProfile: {
-          create: { slug: body.username.toLowerCase() },
+          create: { slug: body.username },
         },
       },
     });
@@ -39,6 +40,9 @@ authRouter.post('/register', async (req, res, next) => {
     const token = jwt.sign({ sub: user.id }, env.JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ token, user: { id: user.id, email: user.email, username: user.username } });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({ error: 'Email or username already in use' });
+    }
     next(error);
   }
 });

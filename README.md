@@ -68,7 +68,7 @@ Example: `"2004"` remains year-level uncertainty and is not treated as exact day
 
 Versioned prompt files live in:
 
-- `/home/runner/work/techlife/techlife/src/prompts/v1/extraction_prompt.txt`
+- `src/prompts/v1/extraction_prompt.txt`
 
 Prompt rules include:
 
@@ -100,6 +100,7 @@ Operational settings:
 
 - `PORT`
 - `PUBLIC_BASE_URL`
+- `CORS_ORIGIN`
 - `UPLOAD_MAX_MB`
 - `URL_IMPORT_TIMEOUT_MS`
 - `RATE_LIMIT_WINDOW_MS`

@@ -10,7 +10,15 @@ export async function resolveCanonicalProduct(params: {
   const nameLower = slugify(params.extractedName);
 
   const aliasMatch = await prisma.productAlias.findFirst({
-    where: { alias: nameLower },
+    where: {
+      alias: nameLower,
+      canonicalProduct: {
+        ...(params.manufacturer
+          ? { manufacturer: { name: { equals: params.manufacturer, mode: 'insensitive' } } }
+          : {}),
+        ...(params.categoryKey ? { category: { key: params.categoryKey } } : {}),
+      },
+    },
     include: { canonicalProduct: true },
   });
   if (aliasMatch) return aliasMatch.canonicalProduct;
@@ -35,8 +43,12 @@ export async function resolveCanonicalProduct(params: {
     update: {},
   });
 
-  const created = await prisma.canonicalProduct.create({
-    data: {
+  const created = await prisma.canonicalProduct.upsert({
+    where: { manufacturerId_name: { manufacturerId: manufacturer.id, name: params.extractedName } },
+    update: {
+      categoryId: category.id,
+    },
+    create: {
       name: params.extractedName,
       manufacturerId: manufacturer.id,
       categoryId: category.id,
