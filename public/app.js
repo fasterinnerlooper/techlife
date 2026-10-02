@@ -165,6 +165,28 @@ async function confirmCandidate(candidateId, extra = {}) {
   setStatus('Candidate confirmed.');
 }
 
+async function refreshImportStatus(importId) {
+  const status = await request(`/api/imports/${importId}/status`, { headers: headers(false) });
+  const node = $('#import-status');
+  if (!node) return status;
+
+  const label = status.status === 'processed' ? 'Processed' : status.status === 'processing' ? 'Processing' : status.status;
+  node.textContent = `Import status: ${label}${status.found ? ` • ${status.found} candidates found` : ''}`;
+  return status;
+}
+
+async function showImportResult(importId) {
+  await refreshImportStatus(importId);
+  const review = await request(`/api/imports/${importId}/review`, { headers: headers(false) });
+  renderReview(review);
+  setStatus(`We found ${review.found} pieces of technology.`);
+}
+
+function markImportProcessing() {
+  const node = $('#import-status');
+  if (node) node.textContent = 'Import status: Processing';
+}
+
 async function loadDashboard() {
   if (!state.token) return;
   const [timeline, stats, profile] = await Promise.all([
@@ -226,26 +248,24 @@ wireJsonForm('#manual-entry-form', async (form) => {
 
 wireJsonForm('#text-import-form', async (form) => {
   const data = Object.fromEntries(new FormData(form).entries());
+  markImportProcessing();
   const result = await request('/api/imports', {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify(data),
   });
-  const review = await request(`/api/imports/${result.importId}/review`, { headers: headers(false) });
-  renderReview(review);
-  setStatus(`We found ${result.found} pieces of technology.`);
+  await showImportResult(result.importId);
 });
 
 wireJsonForm('#freeform-import-form', async (form) => {
   const data = Object.fromEntries(new FormData(form).entries());
+  markImportProcessing();
   const result = await request('/api/imports', {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify({ ...data, method: 'FREEFORM_DESCRIPTION' }),
   });
-  const review = await request(`/api/imports/${result.importId}/review`, { headers: headers(false) });
-  renderReview(review);
-  setStatus(`We found ${result.found} pieces of technology.`);
+  await showImportResult(result.importId);
 });
 
 const imageForm = $('#image-import-form');
@@ -253,14 +273,13 @@ imageForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   try {
     const formData = new FormData(imageForm);
+    markImportProcessing();
     const result = await request('/api/imports/upload', {
       method: 'POST',
       headers: state.token ? { Authorization: ['Bearer', state.token].join(' ') } : {},
       body: formData,
     });
-    const review = await request(`/api/imports/${result.importId}/review`, { headers: headers(false) });
-    renderReview(review);
-    setStatus(`We found ${result.found} pieces of technology.`);
+    await showImportResult(result.importId);
   } catch (error) {
     setStatus(error.message);
   }

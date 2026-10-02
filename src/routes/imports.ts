@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ImportMethod } from '@prisma/client';
 import { requireAuth } from '../middleware/auth.js';
 import { ConfirmCandidatesSchema, CreateImportSchema } from '../services/import/schema.js';
-import { confirmImportCandidates, createImportAndCandidates, getImportReview } from '../services/import/importService.js';
+import { confirmImportCandidates, createImportAndCandidates, getImportReview, getImportStatus } from '../services/import/importService.js';
 import { upload } from '../middleware/upload.js';
 
 export const importsRouter = Router();
@@ -37,6 +37,16 @@ importsRouter.post('/upload', upload.single('image'), async (req, res, next) => 
       content,
     });
     return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+importsRouter.get('/:importId/status', async (req, res, next) => {
+  try {
+    const status = await getImportStatus(req.userId!, req.params.importId);
+    if (!status) return res.status(404).json({ error: 'Import not found' });
+    return res.json(status);
   } catch (error) {
     return next(error);
   }
