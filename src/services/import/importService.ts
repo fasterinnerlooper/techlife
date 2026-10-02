@@ -177,6 +177,7 @@ export async function createImportAndCandidates(input: {
 
   return {
     importId: importEntity.id,
+    status: 'processed',
     found: createdCandidates.length,
     summary: {
       confirmed: createdCandidates.filter((c) => c.status === CandidateStatus.CONFIRMED).length,
@@ -209,6 +210,29 @@ export async function getImportReview(userId: string, importId: string) {
     found: data.foundCount,
     grouped,
     sources: data.sources,
+  };
+}
+
+export async function getImportStatus(userId: string, importId: string) {
+  const data = await prisma.import.findFirst({
+    where: { id: importId, userId },
+    select: {
+      id: true,
+      status: true,
+      foundCount: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  if (!data) return null;
+
+  return {
+    importId: data.id,
+    status: data.status,
+    found: data.foundCount,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
   };
 }
 
